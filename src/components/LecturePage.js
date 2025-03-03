@@ -179,11 +179,11 @@ const LecturePage = () => {
                 canvas.height = userVideo.current.videoHeight;
                 const ctx = canvas.getContext("2d");
                 ctx.drawImage(userVideo.current, 0, 0, canvas.width, canvas.height);
-                const imageData = canvas.toDataURL("image/jpeg", 0.8);
+                const imageData = canvas.toDataURL("image/jpeg", 0.5);
                 console.log("Emitting inference_frame");
                 socketRef.current.emit("inference_frame", { image: imageData });
             }
-        }, 200); // ~20 fps
+        }, 400); // ~20 fps
         return () => clearInterval(intervalId);
     }, [meetingStarted, userVideo, socketRef]);
 
