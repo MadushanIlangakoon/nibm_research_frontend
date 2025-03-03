@@ -92,7 +92,7 @@ const LecturePage = () => {
         if (!meetingStarted || !lecture) return;
 
         // Connect to Node server on port 5000.
-        socketRef.current = io.connect("http://localhost:5000");
+        socketRef.current = io.connect("https://nibm-research-backend.onrender.com");
 
         socketRef.current.on("connect", () => {
             console.log("Socket connected with id:", socketRef.current.id);
