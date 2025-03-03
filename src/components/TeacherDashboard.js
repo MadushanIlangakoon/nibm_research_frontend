@@ -39,7 +39,7 @@ const TeacherDashboard = () => {
 
             // Then, fetch courses via your API
             try {
-                const res = await axios.get('http://localhost:5000/api/courses/by-teacher', {
+                const res = await axios.get('https://nibm-research-backend.onrender.com/api/courses/by-teacher', {
                     params: { teacher_id: teacherRow.id },
                 });
                 setCourses(res.data);
@@ -113,7 +113,7 @@ const TeacherDashboard = () => {
             }
 
             // Post new course to your backend
-            const res = await axios.post('http://localhost:5000/api/courses/create-course', {
+            const res = await axios.post('https://nibm-research-backend.onrender.com/api/courses/create-course', {
                 teacher_id: teacherRow.id,
                 teacher_name: teacherRow.teacherName, // include teacher name
                 subject: courseForm.subject,

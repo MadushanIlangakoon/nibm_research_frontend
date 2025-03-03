@@ -18,7 +18,7 @@ const AdminDashboard = () => {
 
     const fetchQuestions = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/general_questions');
+            const res = await axios.get('https://nibm-research-backend.onrender.com/api/general_questions');
             setQuestions(res.data);
         } catch (error) {
             console.error(error);
@@ -36,7 +36,7 @@ const AdminDashboard = () => {
     const handleAddQuestion = async (e) => {
         e.preventDefault();
         try {
-            await axios.post('http://localhost:5000/api/general_questions', formData);
+            await axios.post('https://nibm-research-backend.onrender.com/api/general_questions', formData);
             setMessage('Question added successfully!');
             setModalOpen(false);
             fetchQuestions();
@@ -48,7 +48,7 @@ const AdminDashboard = () => {
     const handleUpdateQuestion = async (e) => {
         e.preventDefault();
         try {
-            await axios.put('http://localhost:5000/api/general_questions', formData);
+            await axios.put('https://nibm-research-backend.onrender.com/api/general_questions', formData);
             setMessage('Question updated successfully!');
             setModalOpen(false);
             fetchQuestions();
@@ -59,7 +59,7 @@ const AdminDashboard = () => {
 
     const handleDeleteQuestion = async (id) => {
         try {
-            await axios.delete(`http://localhost:5000/api/general_questions/${id}`);
+            await axios.delete(`https://nibm-research-backend.onrender.com/api/general_questions/${id}`);
             setMessage('Question deleted successfully!');
             fetchQuestions();
         } catch (error) {

@@ -56,7 +56,7 @@ const TestQuestionnaire = () => {
         console.log("Inside fetchQuestions effect. user:", user, "lectureId:", lectureId);
         const fetchQuestions = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/api/test_questions', {
+                const res = await axios.get('https://nibm-research-backend.onrender.com/api/test_questions', {
                     params: { lectures_id: lectureId }, // using the key your backend expects
                 });
                 console.log("Fetched test questions:", res.data);
@@ -247,7 +247,7 @@ const TestQuestionnaire = () => {
             response_time: responseTime,
         };
         try {
-            await axios.post('http://localhost:5000/api/test_answers', payload);
+            await axios.post('https://nibm-research-backend.onrender.com/api/test_answers', payload);
             console.log('Test answer submitted for question', currentQuestion.id, 'with status', status);
         } catch (error) {
             console.error('Error submitting test answer:', error);

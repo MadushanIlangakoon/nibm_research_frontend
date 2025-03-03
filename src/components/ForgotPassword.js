@@ -10,7 +10,7 @@ const ForgotPassword = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await axios.post('http://localhost:5000/api/auth/forgot-password',
+            const response = await axios.post('https://nibm-research-backend.onrender.com/api/auth/forgot-password',
                 JSON.stringify({ email }),  // Ensure correct JSON format
                 { headers: { 'Content-Type': 'application/json' } } // Set correct headers
             );

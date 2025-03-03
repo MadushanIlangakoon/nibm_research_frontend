@@ -12,7 +12,7 @@ const TestQuestionTable = ({ lectureId, onEdit }) => {
             try {
                 console.log("Fetching questions for lectureId:", lectureId);
                 const res = await axios.get(
-                    `http://localhost:5000/api/test_questions?lectures_id=${lectureId}`
+                    `https://nibm-research-backend.onrender.com/api/test_questions?lectures_id=${lectureId}`
                 );
                 setQuestions(res.data);
             } catch (error) {
@@ -88,7 +88,7 @@ const TestQuestionTable = ({ lectureId, onEdit }) => {
     // Handler to delete a question.
     const handleDelete = async (id) => {
         try {
-            await axios.delete(`http://localhost:5000/api/test_questions/${id}`);
+            await axios.delete(`https://nibm-research-backend.onrender.com/api/test_questions/${id}`);
             setQuestions((prevQuestions) =>
                 prevQuestions.filter((q) => q.id !== id)
             );

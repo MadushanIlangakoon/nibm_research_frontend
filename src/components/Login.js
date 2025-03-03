@@ -40,7 +40,7 @@ const Login = () => {
         console.log("Submitting login with formData:", formData);
 
         try {
-            const res = await axios.post('http://localhost:5000/api/auth/login', formData);
+            const res = await axios.post('https://nibm-research-backend.onrender.com/api/auth/login', formData);
             console.log("Login response:", res.data);
             const { role, access_token, refresh_token } = res.data;
             console.log("Extracted role:", role);

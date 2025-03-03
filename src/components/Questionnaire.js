@@ -48,7 +48,7 @@ const Questionnaire = () => {
         const fetchQuestions = async () => {
             try {
                 const stream = user?.stream || 'general';
-                const res = await axios.get('http://localhost:5000/api/general_questions', {
+                const res = await axios.get('https://nibm-research-backend.onrender.com/api/general_questions', {
                     params: { stream },
                 });
                 console.log('Fetched questions:', res.data);
@@ -233,7 +233,7 @@ const Questionnaire = () => {
             response_time: responseTime,
         };
         try {
-            await axios.post('http://localhost:5000/api/general_answers', payload);
+            await axios.post('https://nibm-research-backend.onrender.com/api/general_answers', payload);
             console.log('Answer submitted for question', currentQuestion.id, 'with status', status);
         } catch (error) {
             console.error('Error submitting answer:', error);

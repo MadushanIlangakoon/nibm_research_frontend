@@ -13,7 +13,7 @@ const StudentSearchCourses = () => {
     useEffect(() => {
         if (!user) return;
         axios
-            .get('http://localhost:5000/api/enrollments/student', {
+            .get('https://nibm-research-backend.onrender.com/api/enrollments/student', {
                 params: { student_id: user.auth_id || user.id },
             })
             .then((res) => {
@@ -32,7 +32,7 @@ const StudentSearchCourses = () => {
         }
         const delayDebounceFn = setTimeout(() => {
             axios
-                .get('http://localhost:5000/api/courses/search', {
+                .get('https://nibm-research-backend.onrender.com/api/courses/search', {
                     params: { q: query },
                 })
                 .then((res) => {
@@ -49,14 +49,14 @@ const StudentSearchCourses = () => {
 
     const requestEnrollment = async (courseId) => {
         try {
-            await axios.post('http://localhost:5000/api/enrollments', {
+            await axios.post('https://nibm-research-backend.onrender.com/api/enrollments', {
                 course_id: courseId,
                 student_id: user.auth_id,
             });
             setMessage('Enrollment request sent!');
             // Refresh enrollments after a successful request.
             axios
-                .get('http://localhost:5000/api/enrollments/student', {
+                .get('https://nibm-research-backend.onrender.com/api/enrollments/student', {
                     params: { student_id: user.auth_id },
                 })
                 .then((res) => {

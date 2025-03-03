@@ -21,7 +21,7 @@ const TeacherEnrollmentRequests = () => {
     const fetchRequests = useCallback(async () => {
         if (user && user.id && teacherId) {
             try {
-                const res = await axios.get('http://localhost:5000/api/enrollments/requests', {
+                const res = await axios.get('https://nibm-research-backend.onrender.com/api/enrollments/requests', {
                     params: { teacher_id: teacherId },
                 });
                 console.log("Fetched enrollments:", res.data);
@@ -159,7 +159,7 @@ const TeacherEnrollmentRequests = () => {
 
     const updateStatus = async (enrollment_id, status) => {
         try {
-            await axios.post('http://localhost:5000/api/enrollments/update', { enrollment_id, status });
+            await axios.post('https://nibm-research-backend.onrender.com/api/enrollments/update', { enrollment_id, status });
             fetchRequests();
         } catch (error) {
             setMessage(error.response?.data?.error || 'Error updating enrollment status');

@@ -31,7 +31,7 @@ const EditTestQuestionModal = ({ question, onClose, onUpdate }) => {
         e.preventDefault();
         try {
             // Call your update endpoint (adjust URL if necessary)
-            const res = await axios.put("http://localhost:5000/api/test_questions", {
+            const res = await axios.put("https://nibm-research-backend.onrender.com/api/test_questions", {
                 id: question.id,
                 ...formData,
                 lectures_id: question.lectures_id,

@@ -26,7 +26,7 @@ const TeacherCourseDetail = () => {
     useEffect(() => {
         async function fetchCourse() {
             try {
-                const res = await axios.get(`http://localhost:5000/api/courses/${id}`);
+                const res = await axios.get(`https://nibm-research-backend.onrender.com/api/courses/${id}`);
                 setCourse(res.data);
             } catch (err) {
                 setError(err.response?.data?.error || 'Error fetching course');
@@ -40,10 +40,10 @@ const TeacherCourseDetail = () => {
     // Function to fetch lectures for this course (ongoing and upcoming)
     const fetchLectures = useCallback(async () => {
         try {
-            const ongoingRes = await axios.get('http://localhost:5000/api/lectures/ongoing', {
+            const ongoingRes = await axios.get('https://nibm-research-backend.onrender.com/api/lectures/ongoing', {
                 params: { course_id: id },
             });
-            const upcomingRes = await axios.get('http://localhost:5000/api/lectures/upcoming', {
+            const upcomingRes = await axios.get('https://nibm-research-backend.onrender.com/api/lectures/upcoming', {
                 params: { course_id: id },
             });
             setOngoingLectures(ongoingRes.data);
@@ -264,7 +264,7 @@ const TeacherCourseDetail = () => {
                                     <button
                                         onClick={async () => {
                                             try {
-                                                await axios.post('http://localhost:5000/api/lectures/update', {
+                                                await axios.post('https://nibm-research-backend.onrender.com/api/lectures/update', {
                                                     lecture_id: selectedLecture.id,
                                                     started_at: new Date().toISOString(),
                                                 });

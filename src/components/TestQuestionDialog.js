@@ -24,7 +24,7 @@ const TestQuestionDialog = ({ lectureId, onClose, onQuestionAdded }) => {
         }
         try {
             const payload = { ...formData, lectures_id: lectureId };
-            const res = await axios.post('http://localhost:5000/api/test_questions', payload);
+            const res = await axios.post('https://nibm-research-backend.onrender.com/api/test_questions', payload);
             setMessage("Question added successfully!");
             if (onQuestionAdded) {
                 onQuestionAdded(res.data);

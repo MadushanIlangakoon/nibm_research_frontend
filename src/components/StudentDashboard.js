@@ -64,7 +64,7 @@ const StudentDashboard = () => {
     const fetchEnrollments = useCallback(async () => {
         if (!user || !studentId) return;
         try {
-            const res = await axios.get('http://localhost:5000/api/enrollments/student', {
+            const res = await axios.get('https://nibm-research-backend.onrender.com/api/enrollments/student', {
                 params: { student_id: studentId },
             });
             const pending = res.data.filter((enrollment) => enrollment.status === 'pending');
@@ -85,13 +85,13 @@ const StudentDashboard = () => {
                 const courseIds = approvedEnrollments.map((enr) => enr.courses.id);
                 // Fetch ongoing lectures for each course
                 const ongoingPromises = courseIds.map((courseId) =>
-                    axios.get('http://localhost:5000/api/lectures/ongoing', {
+                    axios.get('https://nibm-research-backend.onrender.com/api/lectures/ongoing', {
                         params: { course_id: courseId },
                     })
                 );
                 // Fetch upcoming lectures for each course
                 const upcomingPromises = courseIds.map((courseId) =>
-                    axios.get('http://localhost:5000/api/lectures/upcoming', {
+                    axios.get('https://nibm-research-backend.onrender.com/api/lectures/upcoming', {
                         params: { course_id: courseId },
                     })
                 );
@@ -159,7 +159,7 @@ const StudentDashboard = () => {
 
     const requestEnrollment = async (courseId) => {
         try {
-            await axios.post('http://localhost:5000/api/enrollments', {
+            await axios.post('https://nibm-research-backend.onrender.com/api/enrollments', {
                 course_id: courseId,
                 student_id: user.auth_id,
             });

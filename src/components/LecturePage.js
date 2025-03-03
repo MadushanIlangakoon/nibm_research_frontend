@@ -76,7 +76,7 @@ const LecturePage = () => {
     useEffect(() => {
         async function fetchLecture() {
             try {
-                const res = await axios.get(`http://localhost:5000/api/lectures/${lectureId}`);
+                const res = await axios.get(`https://nibm-research-backend.onrender.com/api/lectures/${lectureId}`);
                 setLecture(res.data);
             } catch (err) {
                 console.error("Error fetching lecture details:", err);

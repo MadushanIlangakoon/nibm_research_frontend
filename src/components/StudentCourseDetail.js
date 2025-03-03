@@ -20,7 +20,7 @@ const StudentCourseDetail = () => {
     useEffect(() => {
         async function fetchCourse() {
             try {
-                const res = await axios.get(`http://localhost:5000/api/courses/${id}`);
+                const res = await axios.get(`https://nibm-research-backend.onrender.com/api/courses/${id}`);
                 setCourse(res.data);
             } catch (err) {
                 setError(err.response?.data?.error || 'Error fetching course');
@@ -34,10 +34,10 @@ const StudentCourseDetail = () => {
     // Function to fetch lectures for this course (ongoing and upcoming)
     const fetchLectures = useCallback(async () => {
         try {
-            const ongoingRes = await axios.get('http://localhost:5000/api/lectures/ongoing', {
+            const ongoingRes = await axios.get('https://nibm-research-backend.onrender.com/api/lectures/ongoing', {
                 params: { course_id: id },
             });
-            const upcomingRes = await axios.get('http://localhost:5000/api/lectures/upcoming', {
+            const upcomingRes = await axios.get('https://nibm-research-backend.onrender.com/api/lectures/upcoming', {
                 params: { course_id: id },
             });
             setOngoingLectures(ongoingRes.data);
