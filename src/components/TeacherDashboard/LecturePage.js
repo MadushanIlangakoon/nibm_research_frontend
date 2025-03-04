@@ -176,10 +176,10 @@ const LecturePage = () => {
                 canvas.height = userVideo.current.videoHeight;
                 const ctx = canvas.getContext("2d");
                 ctx.drawImage(userVideo.current, 0, 0, canvas.width, canvas.height);
-                const imageData = canvas.toDataURL("image/jpeg", 0.8);
+                const imageData = canvas.toDataURL("image/jpeg", 0.5);
                 socketRef.current.emit("inference_frame", { image: imageData });
             }
-        }, 200);
+        }, 400);
         return () => clearInterval(intervalId);
     }, [meetingStarted, userVideo, socketRef]);
 
