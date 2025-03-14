@@ -12,9 +12,9 @@ const Sidebar = ({ setActiveView }) => {
             : '/boy_placeholder.webp');
 
     return (
-        <div className="w-64 h-screen bg-gray-800 text-white flex flex-col p-6">
+        <div className="w-64 h-screen sticky top-0 -mt-18 bg-gray-800 text-white flex flex-col p-6">
             {/* Profile Section */}
-            <div className="flex flex-col items-center mb-8">
+            <div className="flex flex-col items-center mb-8  mt-15">
                 <img
                     className="w-20 h-20 rounded-full object-cover"
                     src={profileImage}
