@@ -17,6 +17,9 @@ import StudentCourseDetail from "./components/StudentDashboard/StudentCourseDeta
 import GeneralQuestionsInfo from "./components/StudentDashboard/GeneralQuestionInfo";
 import Questionnaire from "./components/StudentDashboard/Questionnaire";
 import TestQuestionnaire from "./components/TeacherDashboard/TestQuestionnaire";
+import TeacherReports from "./components/TeacherDashboard/TeacherReports";
+import TeacherStudentReports from "./components/TeacherDashboard/TeacherStudentReports";
+import TeacherCourseReports from "./components/TeacherDashboard/TeacherCourseReports";
 
 function App() {
     return (
@@ -28,11 +31,14 @@ function App() {
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/student-dashboard" element={<StudentDashboard />} />
                 {/* Nest teacher course route under teacher dashboard */}
-                <Route path="/teacher-dashboard" element={<TeacherDashboard />}>
-                    <Route path="teacher-course/:id" element={<TeacherCourseDetail />} />
-                </Route>
-                <Route path="/student-search" element={<StudentSearchCourses />} />
+                <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
+                <Route path="/teacher-dashboard/teacher-course/:id" element={<TeacherCourseDetail />} />
+                <Route path="/teacher-course/:id" element={<TeacherCourseDetail />} />
 
+                <Route path="/student-search" element={<StudentSearchCourses />} />
+                <Route path="/teacher-reports" element={<TeacherReports />} />
+                <Route path="/teacher-reports/student/:studentId" element={<TeacherStudentReports />} />
+                <Route path="/teacher-reports/course/:courseId" element={<TeacherCourseReports />} />
 
                 <Route path="/lecture/:lectureId" element={<LecturePage />} />
                 <Route path="/teacher-enrollments" element={<TeacherEnrollmentRequests />} />
