@@ -12,10 +12,11 @@ const Enrollments = ({ studentId, user, onBack }) => {
     const [approvedEnrollments, setApprovedEnrollments] = useState([]);
     const [message, setMessage] = useState('');
 
+
     const fetchEnrollments = useCallback(async () => {
         if (!user || !studentId) return;
         try {
-            const res = await axios.get('https://nibm-research-backend.onrender.com/api/enrollments/student', {
+            const res = await axios.get(`${window.baseUrl}/api/enrollments/student`, {
                 params: { student_id: studentId },
             });
             const pending = res.data.filter(enrollment => enrollment.status === 'pending');

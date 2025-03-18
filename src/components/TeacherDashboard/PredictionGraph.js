@@ -3,6 +3,7 @@ import React, { useEffect, useRef } from 'react';
 
 const PredictionGraph = ({ data }) => {
     const canvasRef = useRef(null);
+    const MAX_POINTS = 60; // maximum values to show (e.g., 1 minute of data)
 
     useEffect(() => {
         console.log("PredictionGraph received data:", data);
@@ -11,6 +12,9 @@ const PredictionGraph = ({ data }) => {
         const ctx = canvas.getContext('2d');
         const width = canvas.width;
         const height = canvas.height;
+
+        // Slice the data to only include the most recent MAX_POINTS values
+        const displayData = data.length > MAX_POINTS ? data.slice(-MAX_POINTS) : data;
 
         // Clear the canvas
         ctx.clearRect(0, 0, width, height);
@@ -26,12 +30,12 @@ const PredictionGraph = ({ data }) => {
         }
 
         // Plot the line if we have at least two points
-        if (data.length > 1) {
+        if (displayData.length > 1) {
             ctx.beginPath();
             const maxVal = 100; // maximum percentage
             const minVal = 0;
-            const stepX = width / (data.length - 1);
-            data.forEach((value, index) => {
+            const stepX = width / (displayData.length - 1);
+            displayData.forEach((value, index) => {
                 // Invert y so that higher percentage is higher on the canvas
                 const x = index * stepX;
                 const y = height - ((value - minVal) / (maxVal - minVal)) * height;
@@ -50,7 +54,7 @@ const PredictionGraph = ({ data }) => {
     return (
         <canvas
             ref={canvasRef}
-            width={300}
+            width={200}
             height={100}
             style={{ border: '1px solid #ccc', backgroundColor: '#fff' }}
         />

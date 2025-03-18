@@ -1,11 +1,8 @@
-// client/src/components/TeacherStudentReportsDetail.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useReactToPrint } from 'react-to-print';
-
-// Import Chart.js components for the line chart.
 import { Line } from 'react-chartjs-2';
 import {
     Chart as ChartJS,
@@ -20,36 +17,39 @@ import {
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 const TeacherStudentReports = () => {
+    // Always call hooks at the top.
     const { studentId } = useParams();
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
     const [reportsData, setReportsData] = useState({ lectureReports: [], testAnswers: [] });
     const [studentName, setStudentName] = useState('');
-    const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const teacherId = user.teacherId || user.id;
-
-    // Create a ref for the printable report content.
     const reportRef = useRef(null);
 
-    // Configure react-to-print.
     const handlePrint = useReactToPrint({
         contentRef: reportRef,
         documentTitle: `Student_Report_${studentName || studentId}_${new Date().toLocaleDateString()}`,
         pageStyle: `
-      @page { margin: 20mm; }
-      @media print {
-        body { -webkit-print-color-adjust: exact; background: white; }
-      }
-    `,
+          @page { margin: 20mm; }
+          @media print {
+            body { -webkit-print-color-adjust: exact; background: white; }
+          }
+        `,
     });
+
+    // Safe assignment after hooks are declared.
+    const teacherId = user ? (user.teacherId || user.id) : null;
 
     // Fetch student reports
     useEffect(() => {
+        if (!teacherId) {
+            console.log("teacherId not available yet, waiting...");
+            return;
+        }
         const fetchReports = async () => {
             try {
                 console.log('Fetching reports with:', { studentId, teacherId });
-                const res = await axios.get('http://localhost:5000/api/teacher_student_reports', {
+                const res = await axios.get(`${window.baseUrl}/api/teacher_student_reports`, {
                     params: { student_id: studentId, teacher_id: teacherId },
                 });
                 console.log('Fetched reports:', res.data);
@@ -57,8 +57,6 @@ const TeacherStudentReports = () => {
             } catch (err) {
                 console.error('Error in axios request:', err);
                 setError(err.response?.data?.error || 'Error fetching reports');
-            } finally {
-                setLoading(false);
             }
         };
         fetchReports();
@@ -69,27 +67,27 @@ const TeacherStudentReports = () => {
         const fetchStudentName = async () => {
             try {
                 console.log('Fetching student name for id:', studentId);
-                const res = await axios.get(`http://localhost:5000/api/students/id/${studentId}`);
+                const res = await axios.get(`${window.baseUrl}/api/students/id/${studentId}`);
                 console.log('Fetched student name:', res.data.name);
                 setStudentName(res.data.name);
             } catch (err) {
                 console.error('Error fetching student info:', err);
-                // Fallback to studentId if name not available.
                 setStudentName(`ID: ${studentId}`);
             }
         };
         fetchStudentName();
     }, [studentId]);
 
-
-    if (loading)
+    // Instead of returning early, conditionally render in the return block.
+    if (loading || !user || !teacherId) {
         return <div className="p-8 text-center text-gray-600">Loading student report...</div>;
-    if (error)
+    }
+
+    if (error) {
         return <div className="p-8 text-center text-red-500">{error}</div>;
+    }
 
     const { lectureReports, testAnswers } = reportsData;
-
-    // Group test answers by lecture_id.
     const groupedTestAnswers = testAnswers.reduce((acc, answer) => {
         const key = answer.lecture_id;
         if (!acc[key]) acc[key] = [];
@@ -99,10 +97,11 @@ const TeacherStudentReports = () => {
 
     return (
         <div className="min-h-screen bg-gray-100 p-8">
-            {/* Header with Back and Print buttons */}
             <div className="flex justify-between items-center mb-6">
                 <button
-                    onClick={() => navigate(-1)}
+                    onClick={() =>
+                        navigate('/teacher-dashboard', { state: { activeView: 'reports' } })
+                    }
                     className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
                 >
                     &larr; Back
@@ -115,7 +114,6 @@ const TeacherStudentReports = () => {
                 </button>
             </div>
 
-            {/* Printable Report Content */}
             <div ref={reportRef} className="bg-white shadow rounded p-8" tabIndex={-1}>
                 <header className="mb-8 border-b pb-4">
                     <h2 className="text-3xl font-bold text-gray-800 mb-2">Teacher Report</h2>
@@ -123,20 +121,25 @@ const TeacherStudentReports = () => {
                     <p className="text-gray-600">Generated on: {new Date().toLocaleString()}</p>
                 </header>
 
-                {/* Render each Lecture Report as a separate card */}
                 {lectureReports.length === 0 ? (
                     <p className="text-gray-600">No lecture report data available for this student.</p>
                 ) : (
                     lectureReports.map((report) => {
-                        // Prepare chart data if prediction_time_series exists.
                         let chartData = null;
                         if (report.prediction_time_series && report.prediction_time_series.length > 0) {
                             chartData = {
-                                labels: report.prediction_time_series.map((point) => point.time),
+                                labels: report.prediction_time_series.map((point) => {
+                                    const seconds = Math.round(point.time);
+                                    const minutes = Math.floor(seconds / 60);
+                                    const remainingSeconds = seconds % 60;
+                                    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+                                }),
                                 datasets: [
                                     {
                                         label: 'Prediction',
-                                        data: report.prediction_time_series.map((point) => point.prediction),
+                                        data: report.prediction_time_series.map((point) =>
+                                            Math.round(point.prediction)
+                                        ),
                                         fill: false,
                                         borderColor: 'rgb(75, 192, 192)',
                                         tension: 0.1,
@@ -144,7 +147,7 @@ const TeacherStudentReports = () => {
                                 ],
                             };
                         }
-                        // Get test answers for this lecture.
+
                         const lectureTestAnswers = groupedTestAnswers[report.lecture.id] || [];
 
                         return (
@@ -152,7 +155,6 @@ const TeacherStudentReports = () => {
                                 key={report.id}
                                 className="mb-8 bg-white rounded-lg shadow-lg p-6 max-w-10/12 mx-auto"
                             >
-                                {/* Header Row: Title/Description on left, Scheduled Time on right */}
                                 <div
                                     className="flex justify-between items-center p-4 rounded mb-4"
                                     style={{ backgroundColor: 'rgba(14,186,41,0.5)' }}
@@ -169,9 +171,7 @@ const TeacherStudentReports = () => {
                                     </div>
                                 </div>
 
-                                {/* Stats and Graph Row */}
                                 <div className="grid grid-cols-1 xl:grid-cols-[40%_60%] gap-4">
-                                    {/* Left Column: Text Stats */}
                                     <div className="text-gray-600 text-lg p-10 space-y-3 xl:ml-5 2xl:ml-20">
                                         <div className="flex flex-wrap items-center pt-8">
                                             <span className="font-medium">Joined at:</span>
@@ -179,8 +179,7 @@ const TeacherStudentReports = () => {
                                         </div>
                                         <div className="flex flex-wrap items-center pt-5">
                                             <span className="font-medium">Left at:</span>
-                                            <span
-                                                className="ml-1">{report.end_time ? new Date(report.end_time).toLocaleString() : 'In progress'}</span>
+                                            <span className="ml-1">{report.end_time ? new Date(report.end_time).toLocaleString() : 'In progress'}</span>
                                         </div>
                                         <div className="flex flex-wrap items-center pt-5">
                                             <span className="font-medium">Total Meeting Duration:</span>
@@ -203,7 +202,6 @@ const TeacherStudentReports = () => {
                                             {report.avg_prediction.toFixed(2)}%
                                         </div>
                                     </div>
-                                    {/* Right Column: Graph */}
                                     <div className="p-4 xl:ml-0 2xl:ml-15">
                                         {chartData && (
                                             <div className="w-full h-[500px]">
@@ -213,10 +211,10 @@ const TeacherStudentReports = () => {
                                                     width={800}
                                                     options={{
                                                         responsive: true,
-                                                        scales: {y: {min: 0, max: 100}},
+                                                        scales: { y: { min: 0, max: 100 } },
                                                         plugins: {
-                                                            legend: {position: 'top'},
-                                                            title: {display: true, text: 'Prediction over Time'},
+                                                            legend: { position: 'top' },
+                                                            title: { display: true, text: 'Prediction over Time' },
                                                         },
                                                     }}
                                                 />
@@ -225,11 +223,9 @@ const TeacherStudentReports = () => {
                                     </div>
                                 </div>
 
-                                {/* Test Answers Section for this Lecture */}
                                 {lectureTestAnswers.length > 0 && (
                                     <div className="mt-4">
-                                        <h5 className="text-xl font-semibold text-gray-800 mb-10">Lecture Test
-                                            Answers</h5>
+                                        <h5 className="text-xl font-semibold text-gray-800 mb-10">Lecture Test Answers</h5>
                                         <div className="overflow-x-auto">
                                             <table className="min-w-full divide-y divide-gray-200">
                                                 <thead className="bg-gray-50">

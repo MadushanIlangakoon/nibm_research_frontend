@@ -14,11 +14,12 @@ const Courses = ({ studentId, user, onBack }) => {
     const [approvedEnrollments, setApprovedEnrollments] = useState([]);
     const [message, setMessage] = useState('');
 
+
     // Fetch approved enrollments (courses)
     const fetchEnrollments = useCallback(async () => {
         if (!user || !studentId) return;
         try {
-            const res = await axios.get('https://nibm-research-backend.onrender.com/api/enrollments/student', {
+            const res = await axios.get(`${window.baseUrl}/api/enrollments/student`, {
                 params: { student_id: studentId },
             });
             const approved = res.data.filter(

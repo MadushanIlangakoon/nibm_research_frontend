@@ -18,7 +18,7 @@ const Lectures = ({ studentId, user, onBack }) => {
     const fetchEnrollments = useCallback(async () => {
         if (!user || !studentId) return;
         try {
-            const res = await axios.get('https://nibm-research-backend.onrender.com/api/enrollments/student', {
+            const res = await axios.get(`${window.baseUrl}/api/enrollments/student`, {
                 params: { student_id: studentId },
             });
             const approved = res.data.filter(
@@ -43,13 +43,13 @@ const Lectures = ({ studentId, user, onBack }) => {
                 const courseIds = approvedEnrollments.map((enr) => enr.courses.id);
                 // Create promises for ongoing, upcoming, and past lectures
                 const ongoingPromises = courseIds.map((courseId) =>
-                    axios.get('https://nibm-research-backend.onrender.com/api/lectures/ongoing', { params: { course_id: courseId } })
+                    axios.get(`${window.baseUrl}/api/lectures/ongoing`, { params: { course_id: courseId } })
                 );
                 const upcomingPromises = courseIds.map((courseId) =>
-                    axios.get('https://nibm-research-backend.onrender.com/api/lectures/upcoming', { params: { course_id: courseId } })
+                    axios.get(`${window.baseUrl}/api/lectures/upcoming`, { params: { course_id: courseId } })
                 );
                 const pastPromises = courseIds.map((courseId) =>
-                    axios.get('https://nibm-research-backend.onrender.com/api/lectures/past', { params: { course_id: courseId } })
+                    axios.get(`${window.baseUrl}/api/lectures/past`, { params: { course_id: courseId } })
                 );
                 const ongoingResults = await Promise.all(ongoingPromises);
                 const upcomingResults = await Promise.all(upcomingPromises);

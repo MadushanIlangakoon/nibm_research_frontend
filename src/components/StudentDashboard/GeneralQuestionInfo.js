@@ -1,9 +1,23 @@
 // client/src/components/GeneralQuestionsInfo.js
-import React from 'react';
+import React, {useEffect} from 'react';
 import { useNavigate } from 'react-router-dom';
+import {useAuth} from "../../context/AuthContext";
 
 const GeneralQuestionsInfo = () => {
     const navigate = useNavigate();
+    const {user, loading, role} = useAuth()
+
+    useEffect(() => {
+        if (!loading) {
+            if (!user) {
+
+                navigate('/');
+            } else if (role && role === 'teacher') {
+
+                navigate('/teacher-dashboard');
+            }
+        }
+    }, [user, loading, navigate, role]);
 
     const handleStartQuiz = () => {
         // Navigate to the questionnaire page

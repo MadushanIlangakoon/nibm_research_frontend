@@ -20,14 +20,13 @@ const MainDashboard = ({ user }) => {
     const [selectedLecture, setSelectedLecture] = useState(null);
     const [showLectureModal, setShowLectureModal] = useState(false);
 
+    const studentId = user && user.id;
 
-    const studentId = user && (user.auth_id || user.id);
-
-    // Fetch student's enrollments
+    // Fetch student's enrollments with a small delay to ensure user data is loaded.
     const fetchEnrollments = useCallback(async () => {
         if (!user || !studentId) return;
         try {
-            const res = await axios.get('https://nibm-research-backend.onrender.com/api/enrollments/student', {
+            const res = await axios.get(`${window.baseUrl}/api/enrollments/student`, {
                 params: { student_id: studentId },
             });
             const pending = res.data.filter(enrollment => enrollment.status === 'pending');
@@ -40,8 +39,12 @@ const MainDashboard = ({ user }) => {
     }, [user, studentId]);
 
     useEffect(() => {
-        fetchEnrollments();
-    }, [fetchEnrollments]);
+        if (!user || !studentId) return;
+        const timer = setTimeout(() => {
+            fetchEnrollments();
+        }, 300); // Delay 300ms
+        return () => clearTimeout(timer);
+    }, [user, studentId, fetchEnrollments]);
 
     // Fetch lectures for approved courses
     useEffect(() => {
@@ -50,10 +53,10 @@ const MainDashboard = ({ user }) => {
             try {
                 const courseIds = approvedEnrollments.map(enr => enr.courses.id);
                 const ongoingPromises = courseIds.map(courseId =>
-                    axios.get('https://nibm-research-backend.onrender.com/api/lectures/ongoing', { params: { course_id: courseId } })
+                    axios.get(`${window.baseUrl}/api/lectures/ongoing`, { params: { course_id: courseId } })
                 );
                 const upcomingPromises = courseIds.map(courseId =>
-                    axios.get('https://nibm-research-backend.onrender.com/api/lectures/upcoming', { params: { course_id: courseId } })
+                    axios.get(`${window.baseUrl}/api/lectures/upcoming`, { params: { course_id: courseId } })
                 );
                 const ongoingResults = await Promise.all(ongoingPromises);
                 const upcomingResults = await Promise.all(upcomingPromises);
@@ -93,10 +96,13 @@ const MainDashboard = ({ user }) => {
 
     return (
         <>
-
+            {/* Student Search Courses */}
+            <div>
+                <StudentSearchCourses />
+            </div>
 
             {/* Lectures Section */}
-            <div className="mb-2 p-4 mt-12 ">
+            <div className="mb-2 p-4 mt-12">
                 <div className="flex items-center mb-4">
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -126,13 +132,13 @@ const MainDashboard = ({ user }) => {
                         {ongoingLectures.length === 0 ? (
                             <p className="text-gray-500 text-sm">No ongoing lectures.</p>
                         ) : (
-                            ongoingLectures.map(lecture => (
+                            ongoingLectures.map((lecture, index) => (
                                 <div
                                     onClick={() => {
                                         setSelectedLecture(lecture);
                                         setShowLectureModal(true);
                                     }}
-                                    key={lecture.id}
+                                    key={`${lecture.id}-${index}`}
                                     className="flex items-center p-4 mb-4 border border-gray-200 rounded-lg shadow hover:shadow-md transition bg-white"
                                 >
                                     <div className="flex-shrink-0 mr-4">
@@ -179,9 +185,9 @@ const MainDashboard = ({ user }) => {
                         {upcomingLectures.length === 0 ? (
                             <p className="text-gray-500 text-sm">No upcoming lectures.</p>
                         ) : (
-                            upcomingLectures.map(lecture => (
+                            upcomingLectures.map((lecture, index) => (
                                 <div
-                                    key={lecture.id}
+                                    key={`${lecture.id}-${index}`}
                                     className="flex items-center p-4 mb-4 border border-gray-200 rounded-lg shadow hover:shadow-md transition bg-white"
                                 >
                                     <div className="flex-shrink-0 mr-4">
@@ -219,11 +225,6 @@ const MainDashboard = ({ user }) => {
                 </div>
             </div>
 
-            {/* Student Search Courses */}
-            <div>
-                <StudentSearchCourses />
-            </div>
-
             {/* Pending Enrollments Section */}
             <div className="mb-8 pl-8">
                 <div className="flex items-center mb-3">
@@ -243,9 +244,9 @@ const MainDashboard = ({ user }) => {
                     <p className="text-gray-500 text-sm ml-8 mb-3">No pending enrollment requests.</p>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        {pendingEnrollments.map(enrollment => (
+                        {pendingEnrollments.map((enrollment, index) => (
                             <div
-                                key={enrollment.id}
+                                key={`${enrollment.id}-${index}`}
                                 className="bg-white border border-gray-200 rounded-lg p-4 shadow hover:shadow-md transition transform hover:-translate-y-1"
                             >
                                 <div className="flex justify-center mb-2">
@@ -313,9 +314,9 @@ const MainDashboard = ({ user }) => {
                     <p className="text-gray-500">No approved courses.</p>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        {approvedEnrollments.map(enrollment => (
+                        {approvedEnrollments.map((enrollment, index) => (
                             <Link
-                                key={enrollment.id}
+                                key={`${enrollment.id}-${index}`}
                                 to={`/student-course/${enrollment.courses.id}`}
                                 className="flex flex-col bg-white border border-gray-200 rounded-lg p-4 shadow hover:shadow-md transition transform hover:-translate-y-1"
                             >
@@ -367,9 +368,7 @@ const MainDashboard = ({ user }) => {
                     onClose={() => setShowLectureModal(false)}
                 />
             )}
-
         </>
-
     );
 };
 

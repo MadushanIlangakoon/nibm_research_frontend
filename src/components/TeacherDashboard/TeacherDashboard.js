@@ -6,31 +6,32 @@ import TeacherCourses from './TeacherCourses';
 import TeacherEnrollments from './TeacherEnrollments';
 import TeacherLectures from './TeacherLectures';
 import { supabase } from '../../supabaseClient';
-import {Link, useNavigate} from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import TeacherStudents from "./TeacherStudents";
 import TeacherReports from "./TeacherReports";
 
 const TeacherDashboard = () => {
     const { user, loading, role } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const [activeView, setActiveView] = useState("dashboard");
     const [message, setMessage] = useState('');
 
-    function getGreeting() {
-        const hour = new Date().getHours();
-        if (hour < 12) return "Good Morning";
-        else if (hour < 18) return "Good Afternoon";
-        else return "Good Evening";
-    }
-
+    // On mount, check if location.state has an activeView, then clear it.
+    useEffect(() => {
+        if (location.state && location.state.activeView) {
+            console.log("Setting activeView from location.state:", location.state.activeView);
+            setActiveView(location.state.activeView);
+            // Clear the state so it doesn't persist on refresh:
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+    }, [location, navigate]);
 
     useEffect(() => {
         if (!loading) {
             if (!user) {
-
                 navigate('/');
             } else if (role && role === 'student') {
-
                 navigate('/student-dashboard');
             }
         }
@@ -68,7 +69,7 @@ const TeacherDashboard = () => {
                         onBack={() => setActiveView("dashboard")}
                     />
                 );
-                case "reports":
+            case "reports":
                 return (
                     <TeacherReports
                         teacherId={user.id}
@@ -81,9 +82,7 @@ const TeacherDashboard = () => {
         }
     };
 
-    // Wait until the user object has been loaded and the extra profile data is merged.
     if (loading || !user) return <div>Loading...</div>;
-    // Check if the profile has been merged by ensuring the role is set.
     if (user.role === "authenticated") return <div>Loading teacher data...</div>;
 
     return (

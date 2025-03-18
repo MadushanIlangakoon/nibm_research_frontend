@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import ReactWebcam from 'react-webcam';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 
 const TestQuestionnaire = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-
-    // Store the initial lectureId so that it remains stable
     const { lectureId } = useParams();
+
+    // Determine if we should record video based on user's personalization flag.
+    const shouldRecord = user?.personalization === true;
 
     // Countdown before test starts (for neutral pose recording)
     const [preCountdown, setPreCountdown] = useState(5);
@@ -27,7 +27,7 @@ const TestQuestionnaire = () => {
     const [testStarted, setTestStarted] = useState(false);
     const [testFinished, setTestFinished] = useState(false);
 
-    // Media stream & recording refs
+    // Media stream & recording refs (used only if shouldRecord is true)
     const [userMediaStream, setUserMediaStream] = useState(null);
     const webcamRef = useRef(null);
 
@@ -49,15 +49,12 @@ const TestQuestionnaire = () => {
 
     console.log("TestQuestionnaire received lectureId:", lectureId);
 
-
-    // 1. Fetch test questions once both user and the stable lectureId are available.
-    // Store the initial lectureId in a ref so that it remains stable.
+    // 1. Fetch test questions once both user and lectureId are available.
     useEffect(() => {
-        console.log("Inside fetchQuestions effect. user:", user, "lectureId:", lectureId);
         const fetchQuestions = async () => {
             try {
-                const res = await axios.get('https://nibm-research-backend.onrender.com/api/test_questions', {
-                    params: { lectures_id: lectureId }, // using the key your backend expects
+                const res = await axios.get(`${window.baseUrl}/api/test_questions`, {
+                    params: { lectures_id: lectureId },
                 });
                 console.log("Fetched test questions:", res.data);
                 setQuestions(res.data);
@@ -66,16 +63,13 @@ const TestQuestionnaire = () => {
             }
         };
         if (user && lectureId) {
-            console.log("Fetching test questions with lectureId:", lectureId, "and user:", user);
             fetchQuestions();
-        } else {
-            console.warn("Not fetching test questions: either user or lectureId is not defined.");
         }
     }, [user, lectureId]);
 
-    // 2. Start neutral recording as soon as the userMediaStream is ready.
+    // 2. Start neutral recording as soon as the userMediaStream is ready (only if shouldRecord)
     useEffect(() => {
-        if (userMediaStream) {
+        if (shouldRecord && userMediaStream) {
             console.log('Starting neutral recording...');
             try {
                 const neutralRecorder = new MediaRecorder(userMediaStream, { mimeType: 'video/webm' });
@@ -96,7 +90,7 @@ const TestQuestionnaire = () => {
                 console.error('Error starting neutral MediaRecorder:', err);
             }
         }
-    }, [userMediaStream]);
+    }, [userMediaStream, shouldRecord]);
 
     // 3. Handle the 5-second pre-test countdown.
     useEffect(() => {
@@ -109,26 +103,27 @@ const TestQuestionnaire = () => {
         }
     }, [preCountdown]);
 
-    // 4. When preCountdown reaches 0, stop neutral recording and start test.
+    // 4. When preCountdown reaches 0, stop neutral recording (if recording) and start test.
     useEffect(() => {
         if (preCountdown === 0 && !testStarted) {
-            console.log('Pre-test countdown finished. Stopping neutral recording and starting test.');
-            if (neutralRecorderRef.current && neutralRecorderRef.current.state !== 'inactive') {
+            console.log('Pre-test countdown finished.');
+            if (shouldRecord && neutralRecorderRef.current && neutralRecorderRef.current.state !== 'inactive') {
                 neutralRecorderRef.current.stop();
             }
             setTestStarted(true);
         }
-    }, [preCountdown, testStarted]);
+    }, [preCountdown, testStarted, shouldRecord]);
 
-    // 5. When test starts, begin recording the first test question.
+    // 5. When test starts, begin recording the first test question (if recording)
     useEffect(() => {
-        if (testStarted) {
+        if (testStarted && shouldRecord) {
             startQuestionRecording();
         }
-    }, [testStarted]);
+    }, [testStarted, shouldRecord]);
 
     // Function: Start per-question recording.
     const startQuestionRecording = () => {
+        if (!shouldRecord) return;
         if (!userMediaStream) {
             console.warn('User media stream not available for question recording');
             return;
@@ -153,7 +148,7 @@ const TestQuestionnaire = () => {
     // Function: Stop current question recording and store the blob.
     const stopQuestionRecording = () => {
         return new Promise((resolve) => {
-            if (currentQuestionRecorderRef.current && currentQuestionRecorderRef.current.state !== 'inactive') {
+            if (shouldRecord && currentQuestionRecorderRef.current && currentQuestionRecorderRef.current.state !== 'inactive') {
                 currentQuestionRecorderRef.current.onstop = () => {
                     const blob = new Blob(currentQuestionChunksRef.current, { type: 'video/webm' });
                     questionVideoBlobsRef.current.push(blob);
@@ -182,12 +177,11 @@ const TestQuestionnaire = () => {
         } else {
             console.log('Test question timer reached zero.');
             if (!hasSubmitted) {
-                console.log('Auto-submitting as question timed out.');
                 handleSubmit(true);
             }
             moveToNextQuestion();
         }
-    }, [questionTimer, testStarted, testFinished]);
+    }, [questionTimer, testStarted, testFinished, hasSubmitted]);
 
     // 7. Move to the next test question (or finish test).
     const moveToNextQuestion = async () => {
@@ -200,12 +194,12 @@ const TestQuestionnaire = () => {
         setSubmitDisabled(false);
         if (currentIndex + 1 < questions.length) {
             setCurrentIndex((prevIndex) => prevIndex + 1);
-            startQuestionRecording();
+            if (shouldRecord) startQuestionRecording();
         } else {
-            console.log('Test finished. Finishing last test question recording and uploading videos.');
+            console.log('Test finished.');
             setTestFinished(true);
             await stopQuestionRecording();
-            await uploadVideos();
+            if (shouldRecord) await uploadVideos();
         }
     };
 
@@ -228,17 +222,17 @@ const TestQuestionnaire = () => {
         const normalizedAnswer = finalAnswer.trim().toLowerCase();
         const isCorrect = !timedOut && normalizedAnswer === normalizedCorrect;
         const metadata = {
-            student_id: user.auth_id || user.id,
+            student_id: user.id || user.auth_id,
             lecture_id: lectureId,
             question_id: currentQuestion.id,
             is_correct: isCorrect,
             response_time: responseTime,
-            timestamp: new Date().toISOString(),
+            timestamp: responseTime,
             details: finalAnswer,
         };
         questionMetadataRef.current.push(metadata);
         const payload = {
-            student_id: user.auth_id || user.id,
+            student_id: user.id || user.auth_id,
             lecture_id: lectureId,
             question_id: currentQuestion.id,
             student_answer: finalAnswer,
@@ -247,7 +241,7 @@ const TestQuestionnaire = () => {
             response_time: responseTime,
         };
         try {
-            await axios.post('https://nibm-research-backend.onrender.com/api/test_answers', payload);
+            await axios.post(`${window.baseUrl}/api/test_answers`, payload);
             console.log('Test answer submitted for question', currentQuestion.id, 'with status', status);
         } catch (error) {
             console.error('Error submitting test answer:', error);
@@ -297,19 +291,25 @@ const TestQuestionnaire = () => {
         }
     };
 
-    // 12. Always show the webcam preview.
+    // 12. Render webcam preview and countdown.
+    // Whether or not recording is enabled, we show the countdown overlay.
     const renderWebcamPreview = () => (
         <div className="max-w-2xl mx-auto mb-4 relative">
-            <ReactWebcam
-                audio={true}
-                ref={webcamRef}
-                onUserMedia={(stream) => {
-                    console.log('Got user media stream:', stream);
-                    setUserMediaStream(stream);
-                }}
-                videoConstraints={{ facingMode: 'user' }}
-                className="w-full rounded shadow"
-            />
+            {shouldRecord ? (
+                <ReactWebcam
+                    audio={true}
+                    ref={webcamRef}
+                    onUserMedia={(stream) => {
+                        console.log('Got user media stream:', stream);
+                        setUserMediaStream(stream);
+                    }}
+                    videoConstraints={{ facingMode: 'user' }}
+                    className="w-full rounded shadow"
+                />
+            ) : (
+                // When not recording, show an empty container of the same size.
+                <div className="w-full h-64 bg-gray-200 rounded shadow"></div>
+            )}
             {preCountdown > 0 && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
                     <h2 className="text-4xl text-white font-bold">Starting in {preCountdown}...</h2>
@@ -338,12 +338,6 @@ const TestQuestionnaire = () => {
     }
 
     const currentQuestion = questions[currentIndex];
-    console.log('Render debug:', {
-        testStarted,
-        questionsLength: questions.length,
-        currentIndex,
-        currentQuestion,
-    });
 
     return (
         <div className="min-h-screen bg-gray-100 p-6">
@@ -375,7 +369,9 @@ const TestQuestionnaire = () => {
                                 handleSubmit(false);
                             }
                         }}
-                        className={`w-full bg-blue-500 text-white py-3 rounded hover:bg-blue-700 transition ${submitDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`w-full bg-blue-500 text-white py-3 rounded hover:bg-blue-700 transition ${
+                            submitDisabled ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
                         disabled={submitDisabled || studentAnswer.trim() === ''}
                     >
                         Submit Answer

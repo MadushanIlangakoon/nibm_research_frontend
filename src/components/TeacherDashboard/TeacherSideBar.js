@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../supabaseClient';
+import TeacherProfileModal from "./TeacherProfileModal";
 
 const TeacherSideBar = ({ setActiveView }) => {
     const { user } = useAuth();
     const [teacherName, setTeacherName] = useState('');
-    // Collapsed state is only used for smaller screens.
+    const [showProfileModal, setShowProfileModal] = useState(false);
     const [collapsed, setCollapsed] = useState(true);
-
-    // Breakpoint in pixels. For example, 1024px for larger screens.
     const breakpoint = 1024;
 
-    // Update collapsed state on mount and when window is resized.
     useEffect(() => {
         const handleResize = () => {
             if (window.innerWidth >= breakpoint) {
@@ -21,9 +19,7 @@ const TeacherSideBar = ({ setActiveView }) => {
             }
         };
 
-        // Initialize state.
         handleResize();
-
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
@@ -48,18 +44,17 @@ const TeacherSideBar = ({ setActiveView }) => {
     }, [user]);
 
     // Determine profile image.
-    const profileImage = user?.user_metadata?.avatar_url
-        ? user.user_metadata.avatar_url
+    const profileImage = user.photo
+        ? user.photo
         : user && user.gender && user.gender.toLowerCase() === 'female'
             ? '/TeacherFemalePlaceholder.webp'
             : '/TeacherMalePlaceholder.webp';
 
     return (
         <div
-            className={`h-screen sticky top-0 bg-gray-800 text-white p-4 -mt-18 transition-all duration-300 relative ${
+            className={`h-screen sticky top-0 -mt-18  bg-gray-800 text-white p-4 transition-all duration-300 relative ${
                 collapsed ? 'w-16' : 'w-64'
             }`}
-            // Only enable hover-based expansion on small screens.
             onMouseEnter={() => {
                 if (window.innerWidth < breakpoint) setCollapsed(false);
             }}
@@ -74,17 +69,45 @@ const TeacherSideBar = ({ setActiveView }) => {
                     src={profileImage}
                     alt="Profile"
                 />
-                {!collapsed && (
+                {/* Always show an icon button for viewing profile */}
+                {collapsed ? (
+                    <button
+                        onClick={() => setShowProfileModal(true)}
+                        title="View Profile"
+                        className="mt-2 p-2 bg-blue-600 rounded-full hover:bg-blue-700 transition"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-6 w-6 text-white"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A9 9 0 1118.87 6.196 9 9 0 015.12 17.804z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </button>
+                ) : (
                     <>
                         <p className="mt-4 text-lg font-bold">{teacherName || "Teacher Name"}</p>
                         <p className="text-sm">{user?.email || "teacher@example.com"}</p>
                         <button
-                            onClick={() => setActiveView("profile")}
-                            className="mt-2 text-blue-400 hover:underline"
+                            onClick={() => setShowProfileModal(true)}
+                            className="mt-2 text-blue-400 hover:underline z-50"
                         >
                             View Profile
                         </button>
                     </>
+                )}
+                {showProfileModal && (
+                    <TeacherProfileModal
+                        teacher={user}  // assuming user contains teacher info
+                        onClose={() => setShowProfileModal(false)}
+                        onProfileUpdated={(updatedProfile) => {
+                            // handle updated profile, maybe refresh user info
+                            setShowProfileModal(false);
+                        }}
+                    />
                 )}
             </div>
 
@@ -104,18 +127,8 @@ const TeacherSideBar = ({ setActiveView }) => {
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
                             >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M12 20l9-5-9-5-9 5 9 5z"
-                                />
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M12 12l9-5-9-5-9 5 9 5z"
-                                />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 20l9-5-9-5-9 5 9 5z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 12l9-5-9-5-9 5 9 5z" />
                             </svg>
                             {!collapsed && <span>Courses</span>}
                         </button>
@@ -133,18 +146,8 @@ const TeacherSideBar = ({ setActiveView }) => {
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
                             >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M9 12h6m-3-3v6"
-                                />
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M20 7V5a2 2 0 00-2-2h-3.5a2 2 0 00-2 2H11a2 2 0 00-2-2H5a2 2 0 00-2 2v2"
-                                />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-3-3v6" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7V5a2 2 0 00-2-2h-3.5a2 2 0 00-2 2H11a2 2 0 00-2-2H5a2 2 0 00-2 2v2" />
                             </svg>
                             {!collapsed && <span>Enrollments</span>}
                         </button>
@@ -162,18 +165,8 @@ const TeacherSideBar = ({ setActiveView }) => {
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
                             >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14"
-                                />
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M4 6h8a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z"
-                                />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h8a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z" />
                             </svg>
                             {!collapsed && <span>Lectures</span>}
                         </button>
@@ -191,18 +184,8 @@ const TeacherSideBar = ({ setActiveView }) => {
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
                             >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87"
-                                />
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                                />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                             </svg>
                             {!collapsed && <span>Students</span>}
                         </button>
@@ -220,18 +203,8 @@ const TeacherSideBar = ({ setActiveView }) => {
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
                             >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M9 17v-6m4 6v-4m4 4v-2"
-                                />
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M5 19h14a2 2 0 002-2v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2z"
-                                />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-6m4 6v-4m4 4v-2" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 19h14a2 2 0 002-2v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2z" />
                             </svg>
                             {!collapsed && <span>Reports</span>}
                         </button>

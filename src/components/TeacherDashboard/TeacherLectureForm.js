@@ -30,7 +30,7 @@ const TeacherLectureForm = ({ user, course_id }) => {
         const { data: teacherRow, error: teacherError } = await supabase
             .from('teachers')
             .select('id')
-            .eq('auth_id', user.id)
+            .eq('auth_id', user.auth_id)
             .single();
 
         if (teacherError || !teacherRow) {
@@ -61,7 +61,7 @@ const TeacherLectureForm = ({ user, course_id }) => {
         console.log("Creating lecture with payload:", payload);
 
         try {
-            const res = await axios.post('https://nibm-research-backend.onrender.com/api/lectures', payload);
+            const res = await axios.post(`${window.baseUrl}/api/lectures`, payload);
             console.log("Lecture created response:", res.data);
             setMessage('Lecture scheduled/started successfully!');
             setLectureForm({ title: '', description: '', scheduled_at: '' });

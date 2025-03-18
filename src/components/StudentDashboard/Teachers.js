@@ -9,7 +9,7 @@ const Teachers = ({ onBack }) => {
     useEffect(() => {
         async function fetchTeachers() {
             try {
-                const res = await axios.get('https://nibm-research-backend.onrender.com/api/teachers');
+                const res = await axios.get(`${window.baseUrl}/api/teachers`);
                 setTeachers(res.data);
             } catch (error) {
                 setMessage(error.response?.data?.error || 'Error fetching teachers');

@@ -6,8 +6,11 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 
 const Questionnaire = () => {
-    const { user } = useAuth();
+    const { user, loading, role } = useAuth();
     const navigate = useNavigate();
+
+    // Determine if we should record video based on user's personalization flag.
+    const shouldRecord = user?.personalization === true;
 
     // Countdown before quiz starts (for neutral pose recording)
     const [preCountdown, setPreCountdown] = useState(5);
@@ -23,7 +26,7 @@ const Questionnaire = () => {
     const [quizStarted, setQuizStarted] = useState(false);
     const [quizFinished, setQuizFinished] = useState(false);
 
-    // Media stream & recording refs
+    // Media stream & recording refs (only used if shouldRecord is true)
     const [userMediaStream, setUserMediaStream] = useState(null);
     const webcamRef = useRef(null);
 
@@ -43,12 +46,25 @@ const Questionnaire = () => {
     // Timer ref for question countdown
     const timerRef = useRef(null);
 
+
+    useEffect(() => {
+        if (!loading) {
+            if (!user) {
+
+                navigate('/');
+            } else if (role && role === 'teacher') {
+
+                navigate('/teacher-dashboard');
+            }
+        }
+    }, [user, loading, navigate, role]);
+
     // 1. Fetch questions once the user is available
     useEffect(() => {
         const fetchQuestions = async () => {
             try {
                 const stream = user?.stream || 'general';
-                const res = await axios.get('https://nibm-research-backend.onrender.com/api/general_questions', {
+                const res = await axios.get(`${window.baseUrl}/api/general_questions`, {
                     params: { stream },
                 });
                 console.log('Fetched questions:', res.data);
@@ -62,9 +78,9 @@ const Questionnaire = () => {
         }
     }, [user]);
 
-    // 2. Start neutral recording as soon as the userMediaStream is ready
+    // 2. Start neutral recording as soon as the userMediaStream is ready (only if shouldRecord)
     useEffect(() => {
-        if (userMediaStream) {
+        if (shouldRecord && userMediaStream) {
             console.log('Starting neutral recording...');
             try {
                 const neutralRecorder = new MediaRecorder(userMediaStream, { mimeType: 'video/webm' });
@@ -85,7 +101,7 @@ const Questionnaire = () => {
                 console.error('Error starting neutral MediaRecorder:', err);
             }
         }
-    }, [userMediaStream]);
+    }, [userMediaStream, shouldRecord]);
 
     // 3. Handle the 5-second pre-quiz countdown
     useEffect(() => {
@@ -98,26 +114,28 @@ const Questionnaire = () => {
         }
     }, [preCountdown]);
 
-    // 4. When preCountdown reaches 0, stop neutral recording and start quiz
+    // 4. When preCountdown reaches 0, stop neutral recording (if recording) and start quiz
     useEffect(() => {
         if (preCountdown === 0 && !quizStarted) {
-            console.log('Pre-quiz countdown finished. Stopping neutral recording.');
-            if (neutralRecorderRef.current && neutralRecorderRef.current.state !== 'inactive') {
+            console.log('Pre-quiz countdown finished.');
+            if (shouldRecord && neutralRecorderRef.current && neutralRecorderRef.current.state !== 'inactive') {
+                console.log('Stopping neutral recording.');
                 neutralRecorderRef.current.stop();
             }
             setQuizStarted(true);
         }
-    }, [preCountdown, quizStarted]);
+    }, [preCountdown, quizStarted, shouldRecord]);
 
-    // NEW: When quiz starts, start recording the first question
+    // 5. When quiz starts, start recording the first question (if recording)
     useEffect(() => {
-        if (quizStarted) {
+        if (quizStarted && shouldRecord) {
             startQuestionRecording();
         }
-    }, [quizStarted]);
+    }, [quizStarted, shouldRecord]);
 
-    // 5. Start per-question recording.
+    // 6. Start per-question recording.
     const startQuestionRecording = () => {
+        if (!shouldRecord) return;
         if (!userMediaStream) {
             console.warn('User media stream not available for question recording');
             return;
@@ -142,7 +160,7 @@ const Questionnaire = () => {
     // Stop current question recording and store the blob
     const stopQuestionRecording = () => {
         return new Promise((resolve) => {
-            if (currentQuestionRecorderRef.current && currentQuestionRecorderRef.current.state !== 'inactive') {
+            if (shouldRecord && currentQuestionRecorderRef.current && currentQuestionRecorderRef.current.state !== 'inactive') {
                 currentQuestionRecorderRef.current.onstop = () => {
                     const blob = new Blob(currentQuestionChunksRef.current, { type: 'video/webm' });
                     questionVideoBlobsRef.current.push(blob);
@@ -156,7 +174,7 @@ const Questionnaire = () => {
         });
     };
 
-    // 6. Per-question timer and progression
+    // 7. Per-question timer and progression
     useEffect(() => {
         if (!quizStarted || quizFinished) return;
         if (questionTimer > 0) {
@@ -175,7 +193,7 @@ const Questionnaire = () => {
         return () => clearTimeout(timerRef.current);
     }, [questionTimer, quizStarted, quizFinished, hasSubmitted]);
 
-    // 7. Move to the next question (or finish quiz)
+    // 8. Move to the next question (or finish quiz)
     const moveToNextQuestion = async () => {
         console.log('Moving to next question');
         await stopQuestionRecording();
@@ -186,18 +204,17 @@ const Questionnaire = () => {
         setSubmitDisabled(false);
         if (currentIndex + 1 < questions.length) {
             setCurrentIndex(currentIndex + 1);
-            startQuestionRecording();
+            if (shouldRecord) startQuestionRecording();
         } else {
-            console.log('Quiz finished. Finishing last question recording and uploading videos.');
+            console.log('Quiz finished.');
             setQuizFinished(true);
             await stopQuestionRecording();
-            await uploadVideos();
-            // After upload, update the student's record
+            if (shouldRecord) await uploadVideos();
             await updateGeneralQuestionsFlag();
         }
     };
 
-    // 8. Submit the current question's answer and store its metadata
+    // 9. Submit the current question's answer and store its metadata
     const handleSubmit = async (timedOut = false) => {
         if (hasSubmitted) return;
         console.log('Submitting answer for question', currentIndex, 'timedOut:', timedOut);
@@ -213,19 +230,19 @@ const Questionnaire = () => {
         const isCorrect = !timedOut && normalizedAnswer === normalizedCorrect;
         // Store metadata for this question video
         const metadata = {
-            student_id: user.auth_id || user.id,
+            student_id: user.id || user.auth_id,
             gender: user.gender || 'unknown',
             question_id: currentQuestion.id,
             stream: user?.stream || 'general',
             is_correct: isCorrect,
             response_time: responseTime,
-            timestamp: new Date().toISOString(),
+            timestamp: responseTime,
             details: finalAnswer,
         };
         questionMetadataRef.current.push(metadata);
         // Optionally submit the answer to your API
         const payload = {
-            student_id: user.auth_id || user.id,
+            student_id: user.id || user.auth_id,
             question_id: currentQuestion.id,
             student_answer: finalAnswer,
             is_correct: isCorrect,
@@ -233,14 +250,14 @@ const Questionnaire = () => {
             response_time: responseTime,
         };
         try {
-            await axios.post('https://nibm-research-backend.onrender.com/api/general_answers', payload);
+            await axios.post(`${window.baseUrl}/api/general_answers`, payload);
             console.log('Answer submitted for question', currentQuestion.id, 'with status', status);
         } catch (error) {
             console.error('Error submitting answer:', error);
         }
     };
 
-    // 9. Allow submitting by pressing Enter
+    // 10. Allow submitting by pressing Enter
     const handleKeyDown = (e) => {
         if (e.key === 'Enter' && !submitDisabled) {
             e.preventDefault();
@@ -250,7 +267,7 @@ const Questionnaire = () => {
         }
     };
 
-    // 10. When quiz finishes, ensure current recording is stopped.
+    // 11. When quiz finishes, ensure current recording is stopped.
     useEffect(() => {
         if (quizFinished) {
             console.log('Quiz finished. Ensuring recordings are stopped.');
@@ -258,21 +275,21 @@ const Questionnaire = () => {
         }
     }, [quizFinished]);
 
-    // 11. Upload videos and metadata to backend.
+    // 12. Upload videos and metadata to backend.
     const uploadVideos = async () => {
         console.log('Uploading videos...');
         if (!neutralVideoBlobRef.current) {
             console.error('Neutral video blob not available.');
             return;
         }
-        const formData = new FormData();
-        formData.append('neutral_video', neutralVideoBlobRef.current, 'neutral.webm');
+        const formDataObj = new FormData();
+        formDataObj.append('neutral_video', neutralVideoBlobRef.current, 'neutral.webm');
         questionVideoBlobsRef.current.forEach((blob, index) => {
-            formData.append('question_video', blob, `question_${index + 1}.webm`);
+            formDataObj.append('question_video', blob, `question_${index + 1}.webm`);
         });
-        formData.append('question_metadata', JSON.stringify(questionMetadataRef.current));
+        formDataObj.append('question_metadata', JSON.stringify(questionMetadataRef.current));
         try {
-            const res = await axios.post('http://localhost:5001/general_questions/upload', formData, {
+            const res = await axios.post(`${window.mlUrl}/general_questions/upload`, formDataObj, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
@@ -285,7 +302,7 @@ const Questionnaire = () => {
         }
     };
 
-    // NEW: Update the student's did_general_questions flag to true
+    // 13. Update the student's did_general_questions flag to true
     const updateGeneralQuestionsFlag = async () => {
         try {
             const { data, error } = await supabase
@@ -293,35 +310,42 @@ const Questionnaire = () => {
                 .update({ did_general_questions: true })
                 .eq('auth_id', user.auth_id || user.id);
             if (error) {
-                console.error("Error updating general questions flag:", error);
+                console.error('Error updating general questions flag:', error);
             } else {
-                console.log("General questions flag updated:", data);
+                console.log('General questions flag updated:', data);
             }
         } catch (err) {
-            console.error("Error updating general questions flag:", err);
+            console.error('Error updating general questions flag:', err);
         }
     };
 
-    // 12. Always show the webcam preview
-    const renderWebcamPreview = () => (
-        <div className="max-w-2xl mx-auto mb-4 relative">
-            <ReactWebcam
-                audio={true}
-                ref={webcamRef}
-                onUserMedia={(stream) => {
-                    console.log('Got user media stream:', stream);
-                    setUserMediaStream(stream);
-                }}
-                videoConstraints={{ facingMode: 'user' }}
-                className="w-full rounded shadow"
-            />
-            {preCountdown > 0 && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                    <h2 className="text-4xl text-white font-bold">Starting in {preCountdown}...</h2>
-                </div>
-            )}
-        </div>
-    );
+    // 14. Render webcam preview and countdown.
+    // If shouldRecord is false, we simply show a placeholder container with the countdown.
+    const renderWebcamPreview = () => {
+        return (
+            <div className="max-w-2xl mx-auto mb-4 relative">
+                {shouldRecord ? (
+                    <ReactWebcam
+                        audio={true}
+                        ref={webcamRef}
+                        onUserMedia={(stream) => {
+                            console.log('Got user media stream:', stream);
+                            setUserMediaStream(stream);
+                        }}
+                        videoConstraints={{ facingMode: 'user' }}
+                        className="w-full rounded shadow"
+                    />
+                ) : (
+                    <div className="w-full h-64 bg-gray-200 rounded shadow"></div>
+                )}
+                {preCountdown > 0 && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                        <h2 className="text-4xl text-white font-bold">Starting in {preCountdown}...</h2>
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     if (!user) {
         return <div>Please log in to take the questionnaire.</div>;

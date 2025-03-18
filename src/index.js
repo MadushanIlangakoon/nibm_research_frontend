@@ -7,15 +7,19 @@ import reportWebVitals from './reportWebVitals';
 import process from 'process';
 window.process = process;
 
+const baseUrl = process.env.REACT_APP_NODE_SERVER_API_URL;
+window.baseUrl = baseUrl;
+
+
+const mlUrl = process.env.REACT_APP_ML_SERVER_API_URL;
+window.mlUrl = mlUrl;
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
+
 root.render(
     <AuthProvider>
         <App />
     </AuthProvider>
 );
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals();

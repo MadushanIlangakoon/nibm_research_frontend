@@ -7,24 +7,18 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Helper to fetch the student profile from the "students" table.
+    // Fetch student profile from the "students" table.
     const fetchStudentProfile = async (userId) => {
-        // console.log("Fetching student profile for userId:", userId);
         try {
             const { data, error } = await supabase
                 .from('students')
                 .select('*')
                 .eq('auth_id', userId);
-            // console.log("Query result for student profile:", { data, error });
             if (error) {
                 // console.error("Error fetching student profile:", error);
                 return null;
             }
-            if (data && data.length > 0) {
-                // console.log("Student profile retrieved:", data[0]);
-                return data[0];
-            }
-            // console.log("No student profile found for userId:", userId);
+            if (data && data.length > 0) return data[0];
             return null;
         } catch (err) {
             // console.error("Exception fetching student profile:", err);
@@ -32,40 +26,73 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    // A timeout wrapper to force fallback if the query takes too long.
-    const fetchStudentProfileWithTimeout = async (userId, timeout = 5000) => {
+    // Fetch teacher profile from the "teachers" table.
+    const fetchTeacherProfile = async (userId) => {
+        try {
+            const { data, error } = await supabase
+                .from('teachers')
+                .select('*')
+                .eq('auth_id', userId);
+            if (error) {
+                // console.error("Error fetching teacher profile:", error);
+                return null;
+            }
+            if (data && data.length > 0) return data[0];
+            return null;
+        } catch (err) {
+            // console.error("Exception fetching teacher profile:", err);
+            return null;
+        }
+    };
+
+    // A unified function to fetch the profile, adding a role field.
+    const fetchProfileWithTimeout = async (userId, timeout = 5000) => {
         return Promise.race([
-            fetchStudentProfile(userId),
-            new Promise((resolve) => setTimeout(() => {
-                // console.warn("Student profile fetch timed out");
-                resolve(null);
-            }, timeout))
+            (async () => {
+                const studentProfile = await fetchStudentProfile(userId);
+                if (studentProfile) {
+                    // console.log("Fetched student profile:", studentProfile);
+                    return { ...studentProfile, role: 'student' };
+                }
+                const teacherProfile = await fetchTeacherProfile(userId);
+                if (teacherProfile) {
+                    // console.log("Fetched teacher profile:", teacherProfile);
+                    return { ...teacherProfile, role: 'teacher' };
+                }
+                return null;
+            })(),
+            new Promise((resolve) =>
+                setTimeout(() => {
+                    // console.warn("Profile fetch timed out");
+                    resolve(null);
+                }, timeout)
+            )
         ]);
     };
 
     useEffect(() => {
         const getSessionAndProfile = async () => {
-            // console.log("Getting session...");
             const {
                 data: { session },
             } = await supabase.auth.getSession();
-            // console.log("Session received:", session);
             if (session?.user) {
-                // Set basic auth user immediately so UI loads quickly.
+                // Set basic auth user immediately
                 setUser(session.user);
-                // Then fetch extra profile data asynchronously.
-                fetchStudentProfileWithTimeout(session.user.id).then(profile => {
+                // Then fetch the additional profile data and merge it
+                fetchProfileWithTimeout(session.user.id).then((profile) => {
                     if (profile) {
-                        // console.log("Merging student profile with auth user:", profile);
-                        // Preserve the original UUID in user.id by merging extra profile without overwriting it.
-                        setUser(prevUser => ({ ...prevUser, ...profile }));
+                        // console.log("Profile fetched and merged:", profile);
+                        setUser((prevUser) => {
+                            const mergedUser = { ...prevUser, ...profile };
+                            // console.log("Merged user object:", mergedUser);
+                            return mergedUser;
+                        });
                     } else {
-                        // console.log("No student profile found or timed out; using auth user with default did_general_questions=false");
-                        setUser(prevUser => ({ ...prevUser, did_general_questions: false }));
+                        // console.warn("No profile found; defaulting to student");
+                        setUser((prevUser) => ({ ...prevUser, role: 'student', did_general_questions: false }));
                     }
                 });
             } else {
-                // console.log("No session found; setting user to null");
                 setUser(null);
             }
             setLoading(false);
@@ -75,33 +102,28 @@ export const AuthProvider = ({ children }) => {
 
         const { data: authListener } = supabase.auth.onAuthStateChange(
             async (event, session) => {
-                // console.log("Auth state changed:", event, session);
                 if (session?.user) {
                     setUser(session.user);
-                    fetchStudentProfileWithTimeout(session.user.id).then(profile => {
+                    fetchProfileWithTimeout(session.user.id).then((profile) => {
                         if (profile) {
-                            // console.log("Merging student profile on auth state change:", profile);
-                            setUser(prevUser => ({ ...prevUser, ...profile }));
+                            setUser((prevUser) => ({ ...prevUser, ...profile }));
                         } else {
-                            // console.log("No student profile found on auth state change; using auth user with default did_general_questions=false");
-                            setUser(prevUser => ({ ...prevUser, did_general_questions: false }));
+                            setUser((prevUser) => ({ ...prevUser, role: 'student', did_general_questions: false }));
                         }
                     });
                 } else {
-                    // console.log("Auth state change: user signed out");
                     setUser(null);
                 }
             }
         );
 
         return () => {
-            // console.log("Cleaning up authListener");
             authListener.subscription.unsubscribe();
         };
     }, []);
 
     return (
-        <AuthContext.Provider value={{ user, loading }}>
+        <AuthContext.Provider value={{ user, loading, role: user?.role }}>
             {children}
         </AuthContext.Provider>
     );

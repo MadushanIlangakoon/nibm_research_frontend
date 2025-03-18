@@ -12,16 +12,20 @@ const StudentSearchCourses = () => {
     // Fetch student's enrollments on mount and after enrollment requests.
     useEffect(() => {
         if (!user) return;
-        axios
-            .get('https://nibm-research-backend.onrender.com/api/enrollments/student', {
-                params: { student_id: user.auth_id || user.id },
-            })
-            .then((res) => {
-                setEnrollments(res.data);
-            })
-            .catch((error) => {
-                console.error('Error fetching enrollments:', error);
-            });
+        const timer = setTimeout(() => {
+            axios
+                .get(`${window.baseUrl}/api/enrollments/student`, {
+                    params: { student_id: user.id },
+                })
+                .then((res) => {
+                    setEnrollments(res.data);
+                })
+                .catch((error) => {
+                    // console.error('Error fetching enrollments:', error);
+                });
+        }, 300); // delay 300ms to ensure user data is loaded
+
+        return () => clearTimeout(timer);
     }, [user]);
 
     // Debounce the search query and fetch courses as the user types.
@@ -32,7 +36,7 @@ const StudentSearchCourses = () => {
         }
         const delayDebounceFn = setTimeout(() => {
             axios
-                .get('https://nibm-research-backend.onrender.com/api/courses/search', {
+                .get(`${window.baseUrl}/api/courses/search`, {
                     params: { q: query },
                 })
                 .then((res) => {
@@ -49,15 +53,15 @@ const StudentSearchCourses = () => {
 
     const requestEnrollment = async (courseId) => {
         try {
-            await axios.post('https://nibm-research-backend.onrender.com/api/enrollments', {
+            await axios.post(`${window.baseUrl}/api/enrollments`, {
                 course_id: courseId,
-                student_id: user.auth_id,
+                student_id: user.id,
             });
             setMessage('Enrollment request sent!');
             // Refresh enrollments after a successful request.
             axios
-                .get('https://nibm-research-backend.onrender.com/api/enrollments/student', {
-                    params: { student_id: user.auth_id },
+                .get(`${window.baseUrl}/api/enrollments/student`, {
+                    params: { student_id: user.id },
                 })
                 .then((res) => {
                     setEnrollments(res.data);
@@ -84,8 +88,8 @@ const StudentSearchCourses = () => {
     };
 
     return (
-        <div className="p-6 mb-8">
-            <div className=" mx-auto">
+        <div className="p-6 mb-8 mt-5">
+            <div className="mx-auto">
                 <input
                     type="text"
                     placeholder="Enter course title or subject"
@@ -139,7 +143,9 @@ const StudentSearchCourses = () => {
                                             >
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14" />
                                             </svg>
-                                            <span>Subject: <span className="font-medium">{course.subject}</span></span>
+                                            <span>
+                        Subject: <span className="font-medium">{course.subject}</span>
+                      </span>
                                         </div>
                                         <div className="flex items-center text-sm text-gray-600 mt-1">
                                             <svg
@@ -161,7 +167,9 @@ const StudentSearchCourses = () => {
                                                     d="M12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                                                 />
                                             </svg>
-                                            <span>Teacher: <span className="font-medium">{course.teacher_name || "Unknown Teacher"}</span></span>
+                                            <span>
+                        Teacher: <span className="font-medium">{course.teacher_name || "Unknown Teacher"}</span>
+                      </span>
                                         </div>
                                         <p className="text-sm text-gray-500 mt-2">
                                             {truncateText(course.description, 30)}

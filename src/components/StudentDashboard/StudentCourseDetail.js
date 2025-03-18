@@ -1,23 +1,38 @@
 // client/src/components/StudentCourseDetail.js
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import {useParams, Link, useNavigate} from 'react-router-dom';
 import axios from 'axios';
 import { supabase } from '../../supabaseClient';
+import {useAuth} from "../../context/AuthContext";
 
 const StudentCourseDetail = () => {
     const { id } = useParams(); // course id
     const [course, setCourse] = useState(null);
+    const navigate = useNavigate()
     const [ongoingLectures, setOngoingLectures] = useState([]);
     const [upcomingLectures, setUpcomingLectures] = useState([]);
     const [loading, setLoading] = useState(true);
     const [lecturesLoading, setLecturesLoading] = useState(true);
     const [error, setError] = useState('');
+    const {user, role} = useAuth()
+
+    useEffect(() => {
+        if (!loading) {
+            if (!user) {
+
+                navigate('/');
+            } else if (role && role === 'teacher') {
+
+                navigate('/teacher-dashboard');
+            }
+        }
+    }, [user, loading, navigate, role]);
 
     // Fetch course details
     useEffect(() => {
         async function fetchCourse() {
             try {
-                const res = await axios.get(`https://nibm-research-backend.onrender.com/api/courses/${id}`);
+                const res = await axios.get(`${window.baseUrl}/api/courses/${id}`);
                 setCourse(res.data);
             } catch (err) {
                 setError(err.response?.data?.error || 'Error fetching course');
@@ -31,10 +46,10 @@ const StudentCourseDetail = () => {
     // Function to fetch lectures for this course (ongoing and upcoming)
     const fetchLectures = useCallback(async () => {
         try {
-            const ongoingRes = await axios.get('https://nibm-research-backend.onrender.com/api/lectures/ongoing', {
+            const ongoingRes = await axios.get(`${window.baseUrl}/api/lectures/ongoing`, {
                 params: { course_id: id },
             });
-            const upcomingRes = await axios.get('https://nibm-research-backend.onrender.com/api/lectures/upcoming', {
+            const upcomingRes = await axios.get(`${window.baseUrl}/api/lectures/upcoming`, {
                 params: { course_id: id },
             });
             setOngoingLectures(ongoingRes.data);

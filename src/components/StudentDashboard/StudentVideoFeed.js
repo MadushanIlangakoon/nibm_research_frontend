@@ -32,7 +32,7 @@ const StudentVideoFeed = () => {
             formData.append('inference_interval', '5');
 
             try {
-                const res = await axios.post('http://localhost:5001/inference/process_video', formData, {
+                const res = await axios.post(`${window.mlUrl}/inference/process_video`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                 });
                 console.log("Video clip uploaded successfully:", res.data);

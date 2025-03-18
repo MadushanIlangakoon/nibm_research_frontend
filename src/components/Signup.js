@@ -1,4 +1,3 @@
-// client/src/components/Signup.js
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
@@ -11,21 +10,31 @@ const Signup = () => {
         email: '',
         password: '',
         gender: '',
-        stream: '' // new field for stream selection
+        stream: ''
     });
+    const [agreed, setAgreed] = useState(false);
     const [error, setError] = useState('');
+    // use message state to trigger the modal
     const [message, setMessage] = useState('');
+    // showModal flag
+    const [showModal, setShowModal] = useState(false);
 
     const handleChange = (e) =>
         setFormData({ ...formData, [e.target.name]: e.target.value });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!agreed) {
+            setError('You must agree to the Terms and Conditions before signing up.');
+            return;
+        }
         try {
-            const res = await axios.post('https://nibm-research-backend.onrender.com/api/auth/signup', formData);
-            setMessage(res.data.message);
-            // Redirect to login after signup
-            navigate('/');
+            const res = await axios.post(`${window.baseUrl}/api/auth/signup`, formData);
+            // set message from response (or use custom message)
+            const confirmationMessage = "A confirmation email has been sent to your email. Please confirm it and log in again using your username and password.";
+            setMessage(confirmationMessage);
+            setShowModal(true);
+            // Optionally, clear form or any other state
         } catch (err) {
             setError(err.response?.data?.error || 'Signup failed');
         }
@@ -42,12 +51,6 @@ const Signup = () => {
                 {error && (
                     <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-md mb-4">
                         {error}
-                    </div>
-                )}
-
-                {message && (
-                    <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded-md mb-4">
-                        {message}
                     </div>
                 )}
 
@@ -137,9 +140,32 @@ const Signup = () => {
                         />
                     </div>
 
+                    {/* Terms and Conditions Checkbox */}
+                    <div className="flex items-center">
+                        <input
+                            type="checkbox"
+                            id="terms"
+                            name="terms"
+                            checked={agreed}
+                            onChange={() => setAgreed(!agreed)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
+                            I agree to the{' '}
+                            <a href="/terms" className="text-blue-600 hover:underline">
+                                Terms and Conditions
+                            </a>
+                        </label>
+                    </div>
+
                     <button
                         type="submit"
-                        className="w-full py-3 bg-blue-600 text-white rounded-md shadow-md hover:bg-blue-700 transition duration-200"
+                        disabled={!agreed}
+                        className={`w-full py-3 rounded-md shadow-md transition duration-200 ${
+                            agreed
+                                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                        }`}
                     >
                         Signup
                     </button>
@@ -153,19 +179,30 @@ const Signup = () => {
                         </Link>
                     </p>
                 </div>
-
-                <div className="absolute top-4 right-4">
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        className="h-10 w-10 text-blue-600"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                </div>
             </div>
+
+            {/* Modal for confirmation */}
+            {showModal && (
+                <div className="fixed inset-0 flex items-center justify-center z-50">
+                    <div className="absolute inset-0 bg-gray-900 opacity-50"></div>
+                    <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                        <h3 className="text-xl font-bold text-blue-600 mb-4">Signup Successful</h3>
+                        <p className="text-gray-700 mb-6">
+                            A confirmation email has been sent to your email. Please confirm it and log in again using your username and password.
+                        </p>
+                        <button
+                            onClick={() => {
+                                setShowModal(false);
+                                // Optionally navigate to login page if desired:
+                                navigate('/');
+                            }}
+                            className="w-full py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                        >
+                            OK
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

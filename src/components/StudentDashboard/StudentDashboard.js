@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useNavigate, Link } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import MainDashboard from './MainDashboard';
 import Courses from './Courses';
@@ -7,13 +8,13 @@ import Enrollments from './Enrollments';
 import Lectures from './Lectures';
 import Teachers from './Teachers';
 import { supabase } from '../../supabaseClient';
-import { Link } from 'react-router-dom';
 import StudentProfileModal from "./StudentProfileModal";
 
 const SIX_HOURS = 6 * 60 * 60 * 1000;
 
 const StudentDashboard = () => {
-    const { user, loading } = useAuth();
+    const { user, loading, role } = useAuth();
+    const navigate = useNavigate();
     const [activeView, setActiveView] = useState("dashboard");
     const [message, setMessage] = useState('');
     const [showGeneralQuestionModal, setShowGeneralQuestionModal] = useState(false);
@@ -22,15 +23,29 @@ const StudentDashboard = () => {
         return stored ? parseInt(stored, 10) : null;
     });
 
-    const studentId = user && (user.auth_id || user.id);
+    const studentId = user && (user.id);
+    const studentAuthId = user && (user.auth_id);
+
 
     useEffect(() => {
-        if (!user || !studentId) return;
+        if (!loading) {
+            if (!user) {
+
+                navigate('/');
+            } else if (role && role === 'teacher') {
+
+                navigate('/teacher-dashboard');
+            }
+        }
+    }, [user, loading, navigate, role]);
+
+    useEffect(() => {
+        if (!user || !studentAuthId) return;
         const checkReminder = async () => {
             const { data, error } = await supabase
                 .from('students')
                 .select('did_general_questions')
-                .eq('auth_id', studentId)
+                .eq('auth_id', studentAuthId)
                 .single();
             if (error) {
                 console.error("Error fetching student data:", error);
@@ -70,10 +85,9 @@ const StudentDashboard = () => {
         } else if (activeView === "profile") {
             return (
                 <StudentProfileModal
-                    student={user}  // Assuming your user context holds the student profile data.
+                    student={user}
                     onClose={() => setActiveView("dashboard")}
                     onProfileUpdated={(updatedProfile) => {
-                        // Optionally update your user context with updatedProfile here.
                         setActiveView("dashboard");
                     }}
                 />
@@ -113,7 +127,6 @@ const StudentDashboard = () => {
     };
 
     if (loading) return <div>Loading...</div>;
-    if (!user) return <div>Please login to access the dashboard.</div>;
 
     return (
         <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-gray-100">
